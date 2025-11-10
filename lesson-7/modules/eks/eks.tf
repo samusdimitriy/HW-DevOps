@@ -29,7 +29,7 @@ resource "aws_iam_role" "cluster" {
 resource "aws_iam_role_policy_attachment" "cluster" {
   for_each = toset([
     "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
-    "arn:aws:iam::aws:policy/AmazonEKS_VPCResourceController"
+    "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
   ])
 
   role       = aws_iam_role.cluster.name

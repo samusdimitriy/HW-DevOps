@@ -43,7 +43,7 @@ module "eks" {
   desired_size       = 2
   min_size           = 2
   max_size           = 4
-  instance_types     = ["t3.medium"]
+  instance_types     = ["t3.micro"]
 
   additional_tags = {
     Project = "django-app"
