@@ -1,0 +1,59 @@
+{{- $namespace := .Release.Namespace -}}
+{{- range $app := .Values.applications }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ $app.name | quote }}
+  namespace: {{ $namespace | quote }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ $app.project | quote }}
+  source:
+    repoURL: {{ $app.repo_url | quote }}
+    targetRevision: {{ $app.target_revision | quote }}
+    path: {{ $app.path | quote }}
+    {{- $helmValues := default (list) $app.helm_value_files -}}
+    {{- $helmParameters := default (dict) $app.helm_parameters -}}
+    {{- if or $helmValues (gt (len $helmParameters) 0) }}
+    helm:
+      {{- if $helmValues }}
+      valueFiles:
+        {{- range $helmValues }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- if gt (len $helmParameters) 0 }}
+      parameters:
+        {{- range $key, $value := $helmParameters }}
+        - name: {{ $key | quote }}
+          value: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  destination:
+    server: {{ default "https://kubernetes.default.svc" $app.destination_server | quote }}
+    namespace: {{ $app.destination_namespace | quote }}
+  syncPolicy:
+    {{- $sync := default (dict) $app.sync_policy -}}
+    {{- $automated := default (dict "prune" true "self_heal" true "allow_empty" false) $sync.automated -}}
+    automated:
+      prune: {{ default true $automated.prune }}
+      selfHeal: {{ default true $automated.self_heal }}
+      allowEmpty: {{ default false $automated.allow_empty }}
+    {{- $createNamespace := default true $app.create_namespace -}}
+    syncOptions:
+      - CreateNamespace={{ ternary "true" "false" $createNamespace }}
+      {{- range $option := default (list) $sync.sync_options }}
+      - {{ $option | quote }}
+      {{- end }}
+    {{- if $sync.retry }}
+    retry:
+      limit: {{ $sync.retry.limit }}
+      backoff:
+        duration: {{ $sync.retry.backoff.duration | quote }}
+        factor: {{ $sync.retry.backoff.factor }}
+        maxDuration: {{ $sync.retry.backoff.maxDuration | quote }}
+    {{- end }}
+---
+{{- end }}

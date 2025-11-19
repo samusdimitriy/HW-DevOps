@@ -1,0 +1,108 @@
+controller:
+  image:
+    tag: lts-jdk17
+  adminUser: ${admin_user}
+  adminPassword: ${admin_password}
+  serviceType: ${service_type}
+  javaOpts: "-Djenkins.install.runSetupWizard=false"
+  jenkinsUriPrefix: "/"
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - configuration-as-code
+    - job-dsl
+    - workflow-job
+    - docker-workflow
+    - credentials-binding
+    - pipeline-stage-view
+    - aws-credentials
+    - blueocean
+    - pipeline-utility-steps
+  sidecars:
+    configAutoReload:
+      enabled: true
+  jCasC:
+    defaultConfig: false
+    configScripts:
+      kubernetes-cloud: |
+        jenkins:
+          clouds:
+            - kubernetes:
+                name: "kubernetes"
+                namespace: "${namespace}"
+                serverUrl: "https://kubernetes.default"
+                jenkinsUrl: "http://${release_name}.${namespace}.svc.cluster.local:8080"
+                containerCapStr: "20"
+                connectTimeout: 5
+                readTimeout: 60
+                retentionTimeout: 5
+                templates:
+                  - name: "kaniko"
+                    namespace: "${namespace}"
+                    serviceAccount: "${release_name}"
+                    nodeUsageMode: NORMAL
+                    label: "kaniko"
+                    idleMinutes: 1
+                    containers:
+                      - name: "kaniko"
+                        image: "${kaniko_image}"
+                        command: "/busybox/sh"
+                        args:
+                          - "-c"
+                          - "cat"
+                        ttyEnabled: true
+                        resourceLimitCpu: "1"
+                        resourceLimitMemory: "1Gi"
+                        resourceRequestCpu: "200m"
+                        resourceRequestMemory: "256Mi"
+                        envVars:
+                          - envVar:
+                              key: "AWS_REGION"
+                              value: "${aws_region}"
+                          - secretEnvVar:
+                              key: "AWS_ACCESS_KEY_ID"
+                              secretName: "${aws_secret}"
+                              secretKey: "aws_access_key_id"
+                          - secretEnvVar:
+                              key: "AWS_SECRET_ACCESS_KEY"
+                              secretName: "${aws_secret}"
+                              secretKey: "aws_secret_access_key"
+                      - name: "git"
+                        image: "${git_image}"
+                        command: "/bin/sh"
+                        args:
+                          - "-c"
+                          - "cat"
+                        ttyEnabled: true
+                        resourceRequestCpu: "100m"
+                        resourceRequestMemory: "128Mi"
+                        workingDir: "/workspace"
+  serviceAccount:
+    create: true
+    name: ${release_name}
+  tolerations: []
+  nodeSelector: {}
+  resources:
+    requests:
+      cpu: 150m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+agent:
+  enabled: false
+
+rbac:
+  create: true
+
+persistence:
+  enabled: ${persistence ? "true" : "false"}
+%{ if storage_class != "" }
+  storageClass: "${storage_class}"
+%{ endif }
+  size: 8Gi
+
+serviceAccountAgent:
+  create: false

@@ -1,0 +1,119 @@
+pipeline {
+  agent {
+    kubernetes {
+      label 'kaniko'
+      inheritFrom 'kaniko'
+      defaultContainer 'git'
+    }
+  }
+
+  options {
+    skipDefaultCheckout(true)
+    timestamps()
+    ansiColor('xterm')
+  }
+
+  environment {
+    AWS_DEFAULT_REGION = 'us-west-2'
+    ECR_REPOSITORY     = '523369939948.dkr.ecr.us-west-2.amazonaws.com/lesson-7-django-ecr'
+    DOCKERFILE_PATH    = 'lesson-7/app/Dockerfile'
+    BUILD_CONTEXT      = 'lesson-7/app'
+    HELM_VALUES_FILE   = 'lesson-7/charts/django-app/values.yaml'
+    GIT_TARGET_BRANCH  = 'main'
+    GIT_CREDENTIALS_ID = 'github-token'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        container('git') {
+          checkout scm
+        }
+      }
+    }
+
+    stage('Prepare metadata') {
+      steps {
+        script {
+          env.IMAGE_TAG = "build-${env.BUILD_NUMBER}"
+          env.GIT_COMMIT_MESSAGE = "ci: release ${env.IMAGE_TAG}"
+        }
+      }
+    }
+
+    stage('Build & Push image') {
+      steps {
+        container('kaniko') {
+          sh '''
+            /kaniko/executor \
+              --context=$WORKSPACE/${BUILD_CONTEXT} \
+              --dockerfile=$WORKSPACE/${DOCKERFILE_PATH} \
+              --destination=${ECR_REPOSITORY}:${IMAGE_TAG} \
+              --destination=${ECR_REPOSITORY}:latest \
+              --snapshotMode=redo \
+              --verbosity=info
+          '''
+        }
+      }
+    }
+
+    stage('Update Helm chart') {
+      steps {
+        container('git') {
+          sh '''
+            apk add --no-cache python3 py3-pip >/dev/null
+            python3 -m pip install --no-cache-dir pyyaml >/dev/null
+            python3 <<'PY'
+import os
+import pathlib
+import yaml
+values_path = pathlib.Path(os.environ['WORKSPACE']) / os.environ['HELM_VALUES_FILE']
+data = yaml.safe_load(values_path.read_text())
+data.setdefault('image', {})
+data['image']['repository'] = os.environ['ECR_REPOSITORY']
+data['image']['tag'] = os.environ['IMAGE_TAG']
+values_path.write_text(yaml.safe_dump(data, sort_keys=False))
+PY
+            git status --short ${HELM_VALUES_FILE}
+          '''
+        }
+      }
+    }
+
+    stage('Commit changes') {
+      steps {
+        container('git') {
+          script {
+            def changes = sh(script: 'git status --short', returnStdout: true).trim()
+            if (!changes) {
+              echo 'No changes detected, skipping git commit'
+              env.SKIP_GIT_PUSH = 'true'
+            } else {
+              sh '''
+                git config user.name "Jenkins CI"
+                git config user.email "jenkins@example.com"
+              '''
+              sh "git add ${HELM_VALUES_FILE}"
+              sh "git commit -m \"${env.GIT_COMMIT_MESSAGE}\""
+            }
+          }
+        }
+      }
+    }
+
+    stage('Push to Git') {
+      when {
+        expression { env.SKIP_GIT_PUSH != 'true' }
+      }
+      steps {
+        container('git') {
+          withCredentials([usernamePassword(credentialsId: env.GIT_CREDENTIALS_ID, usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+            sh '''
+              git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/samusdimitriy/HW-DevOps.git HEAD:${GIT_TARGET_BRANCH}
+            '''
+          }
+        }
+      }
+    }
+  }
+}

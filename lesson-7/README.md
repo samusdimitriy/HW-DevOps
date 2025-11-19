@@ -1,15 +1,28 @@
-# Lesson 7 — EKS + ECR + Helm
+# Lesson 8-9 — Jenkins + Argo CD GitOps
 
 ## Що створює Terraform
 
-1. **S3 + DynamoDB** для зберігання та блокування Terraform state.
-2. **VPC** (CIDR `10.0.0.0/16`) з трьома публічними та трьома приватними підмережами в `us-west-2`.
-3. **ECR** репозиторій `lesson-7-django-ecr` для зберігання образів Django застосунку.
-4. **EKS** кластер `lesson-7-eks` із керованою групою вузлів (t3.medium, 2–4 ноди) у приватних підмережах.
+1. **S3 бакет + DynamoDB** (`modules/s3-backend`) для зберігання remote state.
+2. **VPC** із публічними/приватними підмережами в `us-west-2` (модуль `modules/vpc`).
+3. **ECR** репозиторій `lesson-7-django-ecr` (модуль `modules/ecr`).
+4. **EKS** кластер `lesson-7-eks` з керованою node group та встановленим **AWS EBS CSI driver** (модуль `modules/eks`).
+5. **Jenkins** встановлений через Helm у namespace `jenkins` (модуль `modules/jenkins`). Chart налаштований під Kubernetes agent із pod template `kaniko + git`, JCasC, RBAC та `LoadBalancer` сервісом.
+6. **Argo CD** (`modules/argo_cd`) + кастомний Helm-chart `modules/argo_cd/charts/argocd-apps`, який реєструє:
+   - Git репозиторій `https://github.com/samusdimitriy/HW-DevOps.git`;
+   - Argo CD Application для `lesson-7/charts/django-app` з автоматичним sync/prune.
 
-Схема розміщена в `main.tf`, а модулі — в `lesson-7/modules/*`.
+Усі модулі підключені з `lesson-7/main.tf`, а вихідні дані описані в `lesson-7/outputs.tf` (namespaces, ECR URL, Jenkins/Argo креденшели тощо).
 
-## Як застосувати інфраструктуру
+## Передумови
+
+- Terraform ≥ 1.6
+- AWS CLI + облікові дані з доступом до EKS/ECR/S3/DynamoDB
+- kubectl + helm
+- Доступ до GitHub репозиторію `HW-DevOps`
+
+Після `terraform apply` потрібен IAM користувач/роль із правами `AmazonEC2ContainerRegistryFullAccess` та `AmazonEKSClusterPolicy` для Jenkins-агента (використовується в секреті нижче).
+
+## Розгортання інфраструктури
 
 ```bash
 cd lesson-7
@@ -18,39 +31,81 @@ terraform workspace select lesson-7 || terraform workspace new lesson-7
 terraform apply
 ```
 
-Після створення кластеру отримаєте всі необхідні вихідні дані (ID VPC, URL ECR, endpoint EKS тощо) з `outputs.tf`.
-
-## Завантаження Docker-образу в ECR
-
-```bash
-AWS_REGION=us-west-2
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-ECR_REPO=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/lesson-7-django-ecr
-
-aws ecr get-login-password --region ${AWS_REGION} \
-  | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-docker build -t lesson-7-django .
-docker tag lesson-7-django:latest ${ECR_REPO}:latest
-docker push ${ECR_REPO}:latest
-```
-
-Вказівку на побудований образ (repo + tag) оновіть у `charts/django-app/values.yaml`.
-
-## Налаштування kubectl та Helm
+Оновіть локальний kubeconfig та перевірте кластер:
 
 ```bash
 aws eks update-kubeconfig --region us-west-2 --name lesson-7-eks
-
-helm upgrade --install django-app charts/django-app \
-  --namespace django --create-namespace
+kubectl get nodes
 ```
 
-Chart містить:
+Корисні вихідні дані:
 
-- `Deployment` з образом із ECR та підключенням `ConfigMap` через `envFrom`.
-- `Service` типу `LoadBalancer` для зовнішнього доступу.
-- `HPA` (autoscaling/v2) 2–6 реплік при CPU > 70%.
-- `ConfigMap` із середовищем Django (перенесені змінні з теми 4).
+```bash
+terraform output ecr_repository_url
+terraform output jenkins_namespace
+terraform output jenkins_admin_credentials
+terraform output argo_cd_namespace
+terraform output argo_cd_initial_admin_password
+```
 
-Додаткові параметри сервісу, autoscaler'а, ресурсів і конфігурації можна змінити у `values.yaml`.
+## Підготовка секретів та Jenkins
+
+1. **AWS cred secret для Kaniko** – створюється в namespace `jenkins`:
+
+   ```bash
+   kubectl -n jenkins create secret generic jenkins-aws-creds \
+     --from-literal=aws_access_key_id=AKIA... \
+     --from-literal=aws_secret_access_key=xxxxxxxx \
+     --dry-run=client -o yaml | kubectl apply -f -
+   ```
+
+   Ці змінні підтягнуться в pod template (див. `modules/jenkins/values.yaml`).
+
+2. **GitHub credentials** – у Jenkins потрібно створити `Username with password` (наприклад, ID `github-token`) з GitHub логіном та PAT (repo scopes). ID має співпасти зі значенням `GIT_CREDENTIALS_ID` у `lesson-7/Jenkinsfile`.
+
+3. **Імпорт pipeline** – достатньо створити Multibranch/Declarative pipeline, що читає `lesson-7/Jenkinsfile` з гілки `lesson-8-9` або `main` цього репозиторію.
+
+## Jenkinsfile: повний CI
+
+`lesson-7/Jenkinsfile` виконує наступні стадії на Kubernetes agent `kaniko`:
+
+1. **Checkout** – завантажує репозиторій у агентський pod.
+2. **Prepare metadata** – формує тег `build-$BUILD_NUMBER` та commit message.
+3. **Build & Push image** – запускає `/kaniko/executor`, збирає `lesson-7/app/Dockerfile` і пушить у `${ECR_REPOSITORY}` (і тег, і `latest`).
+4. **Update Helm chart** – Python-скриптом оновлює `image.repository` та `image.tag` у `lesson-7/charts/django-app/values.yaml`.
+5. **Commit changes** – додає файл, виставляє git user/email та робить `git commit` лише якщо є зміни.
+6. **Push to Git** – пушить у `main` через GitHub PAT. Відсутність змін автоматично скасовує пуш.
+
+Після кожного пушу Argo CD бачить новий тег у Git та запускає sync.
+
+## Argo CD GitOps
+
+- Helm release `modules/argo_cd` розгортає Argo CD (dex off, server `LoadBalancer`).
+- Підлеглий Helm chart `modules/argo_cd/charts/argocd-apps` створює `Repository` + `Application` CR.
+- `Application` спостерігає за гілкою `main`, шляхом `lesson-7/charts/django-app`, namespace `django-app`, увімкнено автоматичний sync/prune та `CreateNamespace=true`.
+
+Доступ до UI:
+
+```bash
+kubectl -n argocd port-forward svc/lesson-7-argocd-server 8080:443
+# або використайте зовнішній LoadBalancer
+```
+
+Логін: юзер `admin`, пароль із `terraform output argo_cd_initial_admin_password`.
+
+## Helm chart Django застосунку
+
+Chart лежить у `lesson-7/charts/django-app` та містить `Deployment`, `Service`, `ConfigMap`, `HPA`. Основні поля (образ, ресурси, змінні середовища) налаштовуються через `values.yaml`, який оновлює Jenkins pipeline. За потреби chart можна встановити вручну:
+
+```bash
+helm upgrade --install django-app lesson-7/charts/django-app \
+  --namespace django-app --create-namespace
+```
+
+## Перевірка потоку CI/CD
+
+1. Створіть новий коміт/тег у гілці, запустіть Jenkins pipeline.
+2. Переконайтесь, що з'явився новий образ у `ECR` (`aws ecr list-images ...`).
+3. Перегляньте Argo CD UI чи `kubectl -n django-app get pods` — має відбутися автоматичне оновлення з новим тегом.
+
+Уся інфраструктура описана в гілці `lesson-8-9` цього репозиторію.

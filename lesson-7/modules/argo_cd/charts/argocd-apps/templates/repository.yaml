@@ -1,0 +1,27 @@
+{{- $namespace := .Release.Namespace -}}
+{{- range $repo := .Values.repositories }}
+apiVersion: argoproj.io/v1alpha1
+kind: Repository
+metadata:
+  name: {{ $repo.name | quote }}
+  namespace: {{ $namespace | quote }}
+spec:
+  type: {{ default "git" $repo.type | quote }}
+  url: {{ $repo.url | quote }}
+  {{- if hasKey $repo "insecure" }}
+  insecure: {{ $repo.insecure }}
+  {{- end }}
+  {{- if $repo.username }}
+  username: {{ $repo.username | quote }}
+  {{- end }}
+  {{- if $repo.password }}
+  password: {{ $repo.password | quote }}
+  {{- end }}
+  {{- if $repo.tls_client_cert_data }}
+  tlsClientCertData: {{ $repo.tls_client_cert_data | quote }}
+  {{- end }}
+  {{- if $repo.tls_client_cert_key }}
+  tlsClientCertKey: {{ $repo.tls_client_cert_key | quote }}
+  {{- end }}
+---
+{{- end }}

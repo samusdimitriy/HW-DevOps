@@ -1,0 +1,68 @@
+global:
+  logging:
+    format: text
+  networkPolicy:
+    create: false
+  image:
+    tag: "v2.11.7"
+
+controller:
+  replicas: 2
+  metrics:
+    enabled: true
+
+repoServer:
+  replicas: 2
+  metrics:
+    enabled: true
+  env:
+    - name: ARGOCD_EXEC_TIMEOUT
+      value: "180"
+
+applicationSet:
+  enabled: true
+  replicaCount: 1
+
+server:
+  replicas: 2
+  autoscaling:
+    enabled: false
+  ingress:
+    enabled: false
+  service:
+    type: ${service_type}
+%{ if length(annotations) > 0 }
+    annotations:
+%{ for k, v in annotations }
+      ${k}: "${v}"
+%{ endfor }
+%{ endif }
+  extraArgs:
+    - --insecure
+  metrics:
+    enabled: true
+
+redis:
+  enabled: true
+
+redis-ha:
+  enabled: false
+
+dex:
+  enabled: false
+
+configurations:
+  enabled: true
+
+configs:
+  cm:
+    timeout.reconciliation: 30s
+    application.resourceTrackingMethod: annotation
+  rbac:
+    policy.csv: |
+      p, role:readonly, applications, get, */*, allow
+  params:
+    server.insecure: true
+    server.disable.auth: false
+  secret:
+    createSecret: true

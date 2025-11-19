@@ -27,3 +27,8 @@ output "node_role_arn" {
   description = "IAM role used by worker nodes"
   value       = aws_iam_role.nodes.arn
 }
+
+output "ebs_csi_driver_role_arn" {
+  description = "IAM role used by the AWS EBS CSI driver"
+  value       = try(aws_iam_role.ebs_csi[0].arn, null)
+}

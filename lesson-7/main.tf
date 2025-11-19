@@ -1,10 +1,51 @@
 locals {
-  region               = "us-west-2"
-  base_name            = "lesson-7"
-  vpc_cidr             = "10.0.0.0/16"
-  public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  private_subnet_cidrs = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
-  availability_zones   = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  region                 = "us-west-2"
+  base_name              = "lesson-7"
+  vpc_cidr               = "10.0.0.0/16"
+  public_subnet_cidrs    = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  private_subnet_cidrs   = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+  availability_zones     = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  jenkins_namespace      = "jenkins"
+  argocd_namespace       = "argocd"
+  aws_credentials_secret = "jenkins-aws-creds"
+  gitops_repo_url        = "https://github.com/samusdimitriy/HW-DevOps.git"
+  gitops_repo_revision   = "main"
+  gitops_repo_path       = "lesson-7/charts/django-app"
+}
+
+locals {
+  argocd_applications = [
+    {
+      name                  = "django-app"
+      project               = "default"
+      repo_url              = local.gitops_repo_url
+      target_revision       = local.gitops_repo_revision
+      path                  = local.gitops_repo_path
+      destination_namespace = "django-app"
+      create_namespace      = true
+      helm_value_files      = []
+      helm_parameters       = {}
+      sync_policy = {
+        automated = {
+          prune       = true
+          self_heal   = true
+          allow_empty = false
+        }
+        sync_options = [
+          "PrunePropagationPolicy=foreground",
+          "RespectIgnoreDifferences=true"
+        ]
+      }
+    }
+  ]
+
+  argocd_repositories = [
+    {
+      name = "hw-devops"
+      url  = local.gitops_repo_url
+      type = "git"
+    }
+  ]
 }
 
 # Підключаємо модуль для S3 та DynamoDB
@@ -48,4 +89,30 @@ module "eks" {
   additional_tags = {
     Project = "django-app"
   }
+}
+
+module "jenkins" {
+  source                      = "./modules/jenkins"
+  namespace                   = local.jenkins_namespace
+  release_name                = "${local.base_name}-jenkins"
+  aws_region                  = local.region
+  aws_credentials_secret_name = local.aws_credentials_secret
+  admin_user                  = "admin"
+  admin_password              = "ChangeMe123!"
+  service_type                = "LoadBalancer"
+  persistence_enabled         = true
+  chart_version               = "5.3.2"
+
+  depends_on = [module.eks]
+}
+
+module "argo_cd" {
+  source              = "./modules/argo_cd"
+  namespace           = local.argocd_namespace
+  release_name        = "${local.base_name}-argocd"
+  server_service_type = "LoadBalancer"
+  applications        = local.argocd_applications
+  repositories        = local.argocd_repositories
+
+  depends_on = [module.eks]
 }

@@ -64,3 +64,15 @@ variable "additional_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_ebs_csi_driver" {
+  description = "Whether to install the AWS EBS CSI driver add-on"
+  type        = bool
+  default     = true
+}
+
+variable "ebs_csi_addon_version" {
+  description = "Optional specific version of the EBS CSI driver add-on"
+  type        = string
+  default     = null
+}
