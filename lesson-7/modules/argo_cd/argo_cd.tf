@@ -42,8 +42,6 @@ resource "helm_release" "applications" {
   chart      = "${path.module}/charts/argocd-apps"
   namespace  = kubernetes_namespace.argo.metadata[0].name
   depends_on = [helm_release.argocd]
-
-  values = [local.applications_values]
 }
 
 data "kubernetes_secret" "initial_admin" {

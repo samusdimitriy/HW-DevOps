@@ -1,8 +1,9 @@
 controller:
   image:
     tag: ${controller_tag}
-  adminUser: ${admin_user}
-  adminPassword: ${admin_password}
+  admin:
+    username: ${admin_user}
+    password: ${admin_password}
   serviceType: ${service_type}
   javaOpts: "-Djenkins.install.runSetupWizard=false"
   jenkinsUriPrefix: "/"

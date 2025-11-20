@@ -1,2 +1,23 @@
-applications: []
-repositories: []
+applications:
+  - name: django-app
+    project: default
+    repoURL: https://github.com/samusdimitriy/HW-DevOps.git
+    targetRevision: lesson-8-9
+    path: lesson-7/charts/django-app
+    destination:
+      server: https://kubernetes.default.svc
+      namespace: django-app
+    syncPolicy:
+      automated:
+        prune: true
+        selfHeal: true
+      syncOptions:
+        - CreateNamespace=true
+        - PrunePropagationPolicy=foreground
+        - RespectIgnoreDifferences=true
+    helm: {}
+
+repositories:
+  - name: hw-devops
+    url: https://github.com/samusdimitriy/HW-DevOps.git
+    type: git
