@@ -33,7 +33,7 @@ resource "helm_release" "jenkins" {
   version          = var.chart_version
   namespace        = kubernetes_namespace.jenkins.metadata[0].name
   create_namespace = false
-  wait             = true
+  wait             = false
   timeout          = 900
 
   values = concat([local.rendered_values], local.additional_values)
