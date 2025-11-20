@@ -35,18 +35,18 @@ spec:
     server: {{ default "https://kubernetes.default.svc" $app.destination_server | quote }}
     namespace: {{ $app.destination_namespace | quote }}
   syncPolicy:
-    {{- $sync := default (dict) $app.sync_policy -}}
-    {{- $automated := default (dict "prune" true "self_heal" true "allow_empty" false) $sync.automated -}}
+    {{ $sync := default (dict) $app.sync_policy }}
+    {{ $automated := default (dict "prune" true "self_heal" true "allow_empty" false) $sync.automated }}
     automated:
       prune: {{ default true $automated.prune }}
       selfHeal: {{ default true $automated.self_heal }}
       allowEmpty: {{ default false $automated.allow_empty }}
-    {{- $createNamespace := default true $app.create_namespace -}}
+    {{ $createNamespace := default true $app.create_namespace }}
     syncOptions:
       - CreateNamespace={{ ternary "true" "false" $createNamespace }}
-      {{- range $option := default (list) $sync.sync_options }}
+      {{ range $option := default (list) $sync.sync_options }}
       - {{ $option | quote }}
-      {{- end }}
+      {{ end }}
     {{- if $sync.retry }}
     retry:
       limit: {{ $sync.retry.limit }}
