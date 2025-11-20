@@ -78,34 +78,24 @@ output "eks_node_role_arn" {
   value       = module.eks.node_role_arn
 }
 
-output "ebs_csi_driver_role_arn" {
-  description = "IAM роль, яку використовує AWS EBS CSI driver"
-  value       = module.eks.ebs_csi_driver_role_arn
-}
-
-output "jenkins_namespace" {
-  description = "Namespace із встановленим Jenkins"
-  value       = module.jenkins.namespace
-}
-
 output "jenkins_admin_credentials" {
-  description = "Дефолтні Jenkins креденшели з chart values"
+  description = "Облікові дані адміністратора Jenkins"
   value       = module.jenkins.admin_credentials
   sensitive   = true
 }
 
-output "argo_cd_namespace" {
-  description = "Namespace де розгорнуто Argo CD"
-  value       = module.argo_cd.namespace
-}
-
-output "argo_cd_server_dns" {
-  description = "DNS сервісу Argo CD усередині кластера"
-  value       = module.argo_cd.server_service_name
+output "jenkins_service_hostname" {
+  description = "DNS-ім'я служби Jenkins"
+  value       = module.jenkins.load_balancer_hostname
 }
 
 output "argo_cd_initial_admin_password" {
-  description = "Початковий пароль користувача admin в Argo CD"
+  description = "Пароль адміністратора Argo CD"
   value       = module.argo_cd.initial_admin_password
   sensitive   = true
+}
+
+output "argo_cd_server_hostname" {
+  description = "DNS-ім'я служби Argo CD"
+  value       = module.argo_cd.server_hostname
 }
