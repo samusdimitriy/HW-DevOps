@@ -85,8 +85,8 @@ output "jenkins_admin_credentials" {
 }
 
 output "jenkins_service_hostname" {
-  description = "DNS-ім'я служби Jenkins"
-  value       = module.jenkins.load_balancer_hostname
+  description = "Cluster DNS для Jenkins service"
+  value       = module.jenkins.service_name
 }
 
 output "argo_cd_initial_admin_password" {
@@ -96,6 +96,6 @@ output "argo_cd_initial_admin_password" {
 }
 
 output "argo_cd_server_hostname" {
-  description = "DNS-ім'я служби Argo CD"
-  value       = module.argo_cd.server_hostname
+  description = "Cluster DNS для Argo CD server service"
+  value       = module.argo_cd.server_service_name
 }
