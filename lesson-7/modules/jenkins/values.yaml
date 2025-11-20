@@ -1,6 +1,6 @@
 controller:
   image:
-    tag: lts-jdk17
+    tag: ${controller_tag}
   adminUser: ${admin_user}
   adminPassword: ${admin_password}
   serviceType: ${service_type}

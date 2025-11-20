@@ -28,6 +28,12 @@ variable "chart_version" {
   default     = "5.3.2"
 }
 
+variable "controller_image_tag" {
+  description = "Tag for the Jenkins controller image"
+  type        = string
+  default     = "lts-jdk17"
+}
+
 variable "service_type" {
   description = "Kubernetes service type exposed by Jenkins"
   type        = string

@@ -7,6 +7,7 @@ locals {
     storage_class  = var.storage_class
     admin_user     = var.admin_user
     admin_password = var.admin_password
+    controller_tag = var.controller_image_tag
     kaniko_image   = var.kaniko_image
     git_image      = var.git_image
     aws_region     = var.aws_region
