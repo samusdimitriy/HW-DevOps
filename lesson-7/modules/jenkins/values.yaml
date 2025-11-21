@@ -7,6 +7,7 @@ controller:
   serviceType: ${service_type}
   javaOpts: "-Djenkins.install.runSetupWizard=false"
   jenkinsUriPrefix: "/"
+  healthProbes: false
   installPlugins:
     - kubernetes
     - workflow-aggregator
