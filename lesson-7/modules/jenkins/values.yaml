@@ -82,6 +82,13 @@ controller:
   serviceAccount:
     create: true
     name: ${release_name}
+  probes:
+    readinessProbe:
+      enabled: false
+    livenessProbe:
+      enabled: false
+    startupProbe:
+      enabled: false
   tolerations: []
   nodeSelector: {}
   resources:
