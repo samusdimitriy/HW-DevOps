@@ -83,9 +83,9 @@ controller:
     create: true
     name: ${release_name}
   probes:
-    readinessProbe:
-      enabled: false
     livenessProbe:
+      enabled: false
+    readinessProbe:
       enabled: false
     startupProbe:
       enabled: false
