@@ -15,11 +15,11 @@ pipeline {
 
   environment {
     AWS_DEFAULT_REGION = 'us-west-2'
-    ECR_REPOSITORY     = '523369939948.dkr.ecr.us-west-2.amazonaws.com/lesson-7-django-ecr'
+    ECR_REPOSITORY     = '431969328609.dkr.ecr.us-west-2.amazonaws.com/lesson-7-django-ecr'
     DOCKERFILE_PATH    = 'lesson-7/app/Dockerfile'
     BUILD_CONTEXT      = 'lesson-7/app'
     HELM_VALUES_FILE   = 'lesson-7/charts/django-app/values.yaml'
-    GIT_TARGET_BRANCH  = 'main'
+    GIT_TARGET_BRANCH  = 'lesson-8-9'
     GIT_CREDENTIALS_ID = 'github-token'
   }
 
