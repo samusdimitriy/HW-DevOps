@@ -33,6 +33,10 @@ spec:
       env:
         - name: AWS_REGION
           value: "us-west-2"
+        - name: AWS_DEFAULT_REGION
+          value: "us-west-2"
+        - name: AWS_SDK_LOAD_CONFIG
+          value: "1"
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
