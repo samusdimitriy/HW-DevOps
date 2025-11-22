@@ -25,8 +25,9 @@ spec:
           mountPath: /workspace
     - name: kaniko
       image: gcr.io/kaniko-project/executor:v1.23.2
-      # kaniko image ships /busybox/sh, not /bin/sh
-      command: ["/busybox/sh", "-c", "cat"]
+      # Keep the container alive for exec; use busybox sleep inside the image
+      command: ["/busybox/sleep"]
+      args: ["infinity"]
       tty: true
       workingDir: /workspace
       env:
