@@ -26,7 +26,7 @@
 
 ```bash
 cd lesson-7
-terraform init
+terraform init -reconfigure
 terraform workspace select lesson-7 || terraform workspace new lesson-7
 terraform apply
 ```
@@ -38,7 +38,7 @@ aws eks update-kubeconfig --region us-west-2 --name lesson-7-eks
 kubectl get nodes
 ```
 
-Корисні вихідні дані:
+Після `terraform init` можна вивести корисні дані:
 
 ```bash
 terraform output ecr_repository_url
@@ -61,9 +61,12 @@ terraform output argo_cd_initial_admin_password
 
    Ці змінні підтягнуться в pod template (див. `modules/jenkins/values.yaml`).
 
-2. **GitHub credentials** – у Jenkins потрібно створити `Username with password` (наприклад, ID `github-token`) з GitHub логіном та PAT (repo scopes). ID має співпасти зі значенням `GIT_CREDENTIALS_ID` у `lesson-7/Jenkinsfile`.
+2. **GitHub credentials** – у Jenkins створіть `Username with password` (ID `github-token`):
+   - Username: `git`
+   - Password: fine-grained PAT з доступом до репозиторію `HW-DevOps`, `Contents: Read and write`, `Metadata: Read-only`.
+   - ID має співпасти зі значенням `GIT_CREDENTIALS_ID` у `lesson-7/Jenkinsfile`.
 
-3. **Імпорт pipeline** – достатньо створити Multibranch/Declarative pipeline, що читає `lesson-7/Jenkinsfile` з гілки `lesson-8-9` або `main` цього репозиторію.
+3. **Імпорт pipeline** – створіть pipeline, що читає `lesson-7/Jenkinsfile` з гілки `lesson-8-9` цього репозиторію.
 
 ## Jenkinsfile: повний CI
 
@@ -74,7 +77,7 @@ terraform output argo_cd_initial_admin_password
 3. **Build & Push image** – запускає `/kaniko/executor`, збирає `lesson-7/app/Dockerfile` і пушить у `${ECR_REPOSITORY}` (і тег, і `latest`).
 4. **Update Helm chart** – Python-скриптом оновлює `image.repository` та `image.tag` у `lesson-7/charts/django-app/values.yaml`.
 5. **Commit changes** – додає файл, виставляє git user/email та робить `git commit` лише якщо є зміни.
-6. **Push to Git** – пушить у `main` через GitHub PAT. Відсутність змін автоматично скасовує пуш.
+6. **Push to Git** – пушить у гілку `lesson-8-9` через GitHub PAT. Відсутність змін автоматично скасовує пуш.
 
 Після кожного пушу Argo CD бачить новий тег у Git та запускає sync.
 
@@ -87,8 +90,9 @@ terraform output argo_cd_initial_admin_password
 Доступ до UI:
 
 ```bash
-kubectl -n argocd port-forward svc/lesson-7-argocd-server 8080:443
-# або використайте зовнішній LoadBalancer
+# якщо порт 8080 зайнятий, оберіть вільний, напр. 8081
+kubectl -n argocd port-forward svc/lesson-7-argocd-server 8081:80
+# або використайте зовнішній LoadBalancer з terraform output argo_cd_server_hostname
 ```
 
 Логін: юзер `admin`, пароль із `terraform output argo_cd_initial_admin_password`.
