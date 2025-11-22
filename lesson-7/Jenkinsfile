@@ -124,8 +124,7 @@ EOF
               --destination=${ECR_REPOSITORY}:${IMAGE_TAG} \
               --destination=${ECR_REPOSITORY}:latest \
               --snapshotMode=redo \
-              --verbosity=info \
-              --docker-config=$DOCKER_CONFIG
+              --verbosity=info
           '''
         }
       }
