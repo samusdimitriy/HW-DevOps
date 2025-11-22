@@ -25,7 +25,8 @@ spec:
           mountPath: /workspace
     - name: kaniko
       image: gcr.io/kaniko-project/executor:v1.23.2
-      command: ["/bin/sh", "-c", "cat"]
+      # kaniko image ships /busybox/sh, not /bin/sh
+      command: ["/busybox/sh", "-c", "cat"]
       tty: true
       workingDir: /workspace
       env:
