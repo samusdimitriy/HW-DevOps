@@ -161,6 +161,7 @@ PY
           sh '''
             apk add --no-cache python3 py3-pip >/dev/null
             python3 -m pip install --no-cache-dir --break-system-packages pyyaml >/dev/null
+            git config --global --add safe.directory /workspace/workspace/lesson-8-9
             python3 <<'PY'
 import os
 import pathlib
