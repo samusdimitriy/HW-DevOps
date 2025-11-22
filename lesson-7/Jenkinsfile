@@ -24,10 +24,10 @@ spec:
         - name: workspace-volume
           mountPath: /workspace
     - name: kaniko
-      image: gcr.io/kaniko-project/executor:v1.23.2
-      # Keep the container alive for exec; run sleep via busybox shell
-      command: ["/busybox/sh"]
-      args: ["-c", "sleep infinity"]
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      # Keep the container alive for exec; use shell from debug image
+      command: ["/bin/sh"]
+      args: ["-c", "sleep 365d"]
       tty: true
       workingDir: /workspace
       env:
