@@ -10,6 +10,7 @@
 6. **Argo CD** (`modules/argo_cd`) + кастомний Helm-chart `modules/argo_cd/charts/argocd-apps`, який реєструє:
    - Git репозиторій `https://github.com/samusdimitriy/HW-DevOps.git`;
    - Argo CD Application для `lesson-7/charts/django-app` з автоматичним sync/prune.
+7. **RDS** універсальний модуль `modules/rds`, який уміє створювати або Aurora cluster, або звичайну RDS інстансу (приклад нижче).
 
 Усі модулі підключені з `lesson-7/main.tf`, а вихідні дані описані в `lesson-7/outputs.tf` (namespaces, ECR URL, Jenkins/Argo креденшели тощо).
 
@@ -105,6 +106,28 @@ Chart лежить у `lesson-7/charts/django-app` та містить `Deployme
 helm upgrade --install django-app lesson-7/charts/django-app \
   --namespace django-app --create-namespace
 ```
+
+## Приклад використання модуля RDS
+
+```hcl
+module "rds" {
+  source = "./modules/rds"
+
+  name_prefix           = "lesson-db"
+  use_aurora            = true                # false -> звичайна RDS instance
+  engine                = "aurora-postgresql" # для звичайної RDS: "postgres"
+  engine_version        = "14.10"
+  aurora_instance_class = "db.r6g.medium"
+  master_username       = "dbadmin"
+  master_password       = "ChangeMe123!"
+
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+  allowed_cidrs      = ["10.0.0.0/16"]
+}
+```
+
+Модуль автоматично створює subnet group, security group, parameter group та видає endpoint/port у виходах.
 
 ## Перевірка потоку CI/CD
 
