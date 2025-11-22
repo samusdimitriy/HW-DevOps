@@ -90,15 +90,13 @@ spec:
             export AWS_REGION=${AWS_REGION:-${AWS_DEFAULT_REGION}}
             export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
             PASSWORD=$(aws ecr get-login-password --region ${AWS_REGION})
-            cat > /workspace/.docker/config.json <<EOF
-{
-  "auths": {
-    "431969328609.dkr.ecr.us-west-2.amazonaws.com": {
-      "auth": "$(echo -n "AWS:${PASSWORD}" | base64)"
-    }
-  }
-}
-EOF
+            python3 <<'PY'
+import json, base64, os, pathlib
+pw = os.environ["PASSWORD"]
+auth = base64.b64encode(f"AWS:{pw}".encode()).decode()
+conf = {"auths": {"431969328609.dkr.ecr.us-west-2.amazonaws.com": {"auth": auth}}}
+pathlib.Path("/workspace/.docker/config.json").write_text(json.dumps(conf))
+PY
           '''
         }
       }
