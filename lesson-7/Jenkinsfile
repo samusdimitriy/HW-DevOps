@@ -37,6 +37,8 @@ spec:
           value: "us-west-2"
         - name: AWS_SDK_LOAD_CONFIG
           value: "1"
+        - name: AWS_EC2_METADATA_DISABLED
+          value: "true"
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
