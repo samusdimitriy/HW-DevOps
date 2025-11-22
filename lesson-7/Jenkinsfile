@@ -79,6 +79,28 @@ spec:
       }
     }
 
+    stage('ECR login config') {
+      steps {
+        container('git') {
+          sh '''
+            apk add --no-cache python3 py3-pip >/dev/null
+            python3 -m pip install --no-cache-dir awscli >/dev/null
+            mkdir -p /workspace/.docker
+            PASSWORD=$(aws ecr get-login-password --region ${AWS_REGION})
+            cat > /workspace/.docker/config.json <<EOF
+{
+  "auths": {
+    "431969328609.dkr.ecr.us-west-2.amazonaws.com": {
+      "auth": "$(echo -n "AWS:${PASSWORD}" | base64)"
+    }
+  }
+}
+EOF
+          '''
+        }
+      }
+    }
+
     stage('Prepare metadata') {
       steps {
         script {
@@ -92,13 +114,15 @@ spec:
       steps {
         container('kaniko') {
           sh '''
+            export DOCKER_CONFIG=/workspace/.docker
             /kaniko/executor \
               --context=$WORKSPACE/${BUILD_CONTEXT} \
               --dockerfile=$WORKSPACE/${DOCKERFILE_PATH} \
               --destination=${ECR_REPOSITORY}:${IMAGE_TAG} \
               --destination=${ECR_REPOSITORY}:latest \
               --snapshotMode=redo \
-              --verbosity=info
+              --verbosity=info \
+              --docker-config=$DOCKER_CONFIG
           '''
         }
       }
