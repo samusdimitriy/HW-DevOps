@@ -23,6 +23,25 @@ spec:
       volumeMounts:
         - name: workspace-volume
           mountPath: /workspace
+      env:
+        - name: AWS_REGION
+          value: "us-west-2"
+        - name: AWS_DEFAULT_REGION
+          value: "us-west-2"
+        - name: AWS_SDK_LOAD_CONFIG
+          value: "1"
+        - name: AWS_EC2_METADATA_DISABLED
+          value: "true"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-aws-creds
+              key: aws_access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-aws-creds
+              key: aws_secret_access_key
     - name: kaniko
       image: gcr.io/kaniko-project/executor:v1.23.2-debug
       # Keep the container alive for exec; use shell from debug image
