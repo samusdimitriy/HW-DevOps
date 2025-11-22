@@ -1,15 +1,12 @@
 replicaCount: 2
-
 image:
-  repository: "431969328609.dkr.ecr.us-west-2.amazonaws.com/lesson-7-django-ecr"
-  tag: "latest"
+  repository: 431969328609.dkr.ecr.us-west-2.amazonaws.com/lesson-7-django-ecr
+  tag: build-32
   pullPolicy: Always
-
 service:
   type: LoadBalancer
   port: 80
   targetPort: 8000
-
 resources:
   limits:
     cpu: 300m
@@ -17,29 +14,26 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
-
 autoscaling:
   enabled: true
   minReplicas: 1
   maxReplicas: 6
   targetCPUUtilizationPercentage: 70
-
 configmap:
   enabled: true
   name: django-app-env
   data:
-    DJANGO_SETTINGS_MODULE: "project.settings"
-    DJANGO_ALLOWED_HOSTS: "*"
-    DJANGO_DEBUG: "False"
-    DATABASE_HOST: "postgres.default.svc.cluster.local"
-    DATABASE_PORT: "5432"
-    DATABASE_NAME: "django"
-    DATABASE_USER: "django"
-    DATABASE_PASSWORD: "replace_me"
-    SECRET_KEY: "replace_with_secret"
-
+    DJANGO_SETTINGS_MODULE: project.settings
+    DJANGO_ALLOWED_HOSTS: '*'
+    DJANGO_DEBUG: 'False'
+    DATABASE_HOST: postgres.default.svc.cluster.local
+    DATABASE_PORT: '5432'
+    DATABASE_NAME: django
+    DATABASE_USER: django
+    DATABASE_PASSWORD: replace_me
+    SECRET_KEY: replace_with_secret
 containerPort: 8000
-serviceAccountName: ""
+serviceAccountName: ''
 podAnnotations: {}
 podLabels: {}
 nodeSelector: {}
