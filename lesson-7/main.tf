@@ -127,3 +127,19 @@ module "argo_cd" {
 
   depends_on = [module.eks]
 }
+
+module "rds" {
+  source = "./modules/rds"
+
+  name_prefix           = "${local.base_name}-db"
+  use_aurora            = true
+  engine                = "aurora-postgresql"
+  engine_version        = "14.10"
+  aurora_instance_class = "db.r6g.medium"
+  master_username       = "dbadmin"
+  master_password       = var.db_master_password
+
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnets
+  allowed_cidrs      = [local.vpc_cidr]
+}

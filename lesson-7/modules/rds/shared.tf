@@ -1,5 +1,5 @@
 locals {
-  major_version = regex("(\\d+)", var.engine_version)
+  major_version = split(".", var.engine_version)[0]
   family        = var.use_aurora ? "aurora-postgresql${local.major_version}" : "${var.engine}${local.major_version}"
 }
 
