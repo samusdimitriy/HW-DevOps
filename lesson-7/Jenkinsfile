@@ -44,9 +44,9 @@ spec:
               key: aws_secret_access_key
     - name: kaniko
       image: gcr.io/kaniko-project/executor:v1.23.2-debug
-      # Keep the container alive for exec; use shell from debug image
+      # Keep the container alive for exec; use tail to avoid exit
       command: ["/bin/sh"]
-      args: ["-c", "sleep 365d"]
+      args: ["-c", "tail -f /dev/null"]
       tty: true
       workingDir: /workspace
       resources:
