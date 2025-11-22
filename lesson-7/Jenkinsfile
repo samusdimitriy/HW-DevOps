@@ -16,7 +16,7 @@ spec:
       emptyDir: {}
   containers:
     - name: git
-      image: alpine/git:2.47.0
+      image: alpine/git:2.45.2
       command: ["/bin/sh", "-c", "cat"]
       tty: true
       workingDir: /workspace
@@ -25,8 +25,9 @@ spec:
           mountPath: /workspace
     - name: kaniko
       image: gcr.io/kaniko-project/executor:v1.23.2
-      command: ["/busybox/sh", "-c", "cat"]
+      command: ["/bin/sh", "-c", "cat"]
       tty: true
+      workingDir: /workspace
       env:
         - name: AWS_REGION
           value: "us-west-2"
