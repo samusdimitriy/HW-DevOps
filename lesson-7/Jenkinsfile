@@ -51,11 +51,11 @@ spec:
       workingDir: /workspace
       resources:
         requests:
-          cpu: "500m"
+          cpu: "300m"
           memory: "512Mi"
         limits:
-          cpu: "1000m"
-          memory: "1536Mi"
+          cpu: "800m"
+          memory: "1024Mi"
       env:
         - name: AWS_REGION
           value: "us-west-2"
