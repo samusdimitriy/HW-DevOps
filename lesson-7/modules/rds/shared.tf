@@ -45,8 +45,9 @@ resource "aws_db_parameter_group" "this" {
   dynamic "parameter" {
     for_each = var.parameters
     content {
-      name  = parameter.key
-      value = parameter.value
+      name         = parameter.key
+      value        = parameter.value
+      apply_method = parameter.key == "max_connections" ? "pending-reboot" : "immediate"
     }
   }
 }
@@ -60,8 +61,9 @@ resource "aws_rds_cluster_parameter_group" "this" {
   dynamic "parameter" {
     for_each = var.parameters
     content {
-      name  = parameter.key
-      value = parameter.value
+      name         = parameter.key
+      value        = parameter.value
+      apply_method = parameter.key == "max_connections" ? "pending-reboot" : "immediate"
     }
   }
 }

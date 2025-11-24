@@ -95,9 +95,10 @@ resource "aws_security_group_rule" "cluster_egress" {
 }
 
 resource "aws_eks_cluster" "this" {
-  name     = var.cluster_name
-  role_arn = aws_iam_role.cluster.arn
-  version  = var.cluster_version
+  name                           = var.cluster_name
+  role_arn                       = aws_iam_role.cluster.arn
+  version                        = var.cluster_version
+  bootstrap_self_managed_addons  = false
 
   vpc_config {
     subnet_ids         = local.cluster_subnet_ids
@@ -111,6 +112,10 @@ resource "aws_eks_cluster" "this" {
   })
 
   depends_on = [aws_iam_role_policy_attachment.cluster]
+
+  lifecycle {
+    ignore_changes = [bootstrap_self_managed_addons]
+  }
 }
 
 resource "aws_eks_node_group" "this" {

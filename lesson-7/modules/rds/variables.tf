@@ -110,6 +110,6 @@ variable "parameters" {
   default = {
     max_connections = "200"
     log_statement   = "none"
-    work_mem        = "4MB"
+    work_mem        = "4096" # in kilobytes for Postgres-compatible engines
   }
 }

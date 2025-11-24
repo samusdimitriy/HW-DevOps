@@ -99,3 +99,13 @@ output "argo_cd_server_hostname" {
   description = "Cluster DNS для Argo CD server service"
   value       = module.argo_cd.server_service_name
 }
+
+output "grafana_service_name" {
+  description = "Cluster service name for Grafana"
+  value       = module.monitoring.grafana_service_name
+}
+
+output "monitoring_namespace" {
+  description = "Namespace де розгорнуто Prometheus/Grafana"
+  value       = module.monitoring.namespace
+}

@@ -11,6 +11,7 @@
    - Git репозиторій `https://github.com/samusdimitriy/HW-DevOps.git`;
    - Argo CD Application для `lesson-7/charts/django-app` з автоматичним sync/prune.
 7. **RDS** універсальний модуль `modules/rds`, який уміє створювати або Aurora cluster, або звичайну RDS інстансу (приклад нижче).
+8. **Моніторинг (Prometheus + Grafana)** через Helm chart `kube-prometheus-stack` у namespace `monitoring` (модуль `modules/monitoring`). Grafana паролі задаються через змінну `grafana_admin_password`.
 
 Усі модулі підключені з `lesson-7/main.tf`, а вихідні дані описані в `lesson-7/outputs.tf` (namespaces, ECR URL, Jenkins/Argo креденшели тощо).
 
@@ -47,6 +48,8 @@ terraform output jenkins_namespace
 terraform output jenkins_admin_credentials
 terraform output argo_cd_namespace
 terraform output argo_cd_initial_admin_password
+terraform output grafana_service_name
+terraform output monitoring_namespace
 ```
 
 ## Підготовка секретів та Jenkins
@@ -134,5 +137,22 @@ module "rds" {
 1. Створіть новий коміт/тег у гілці, запустіть Jenkins pipeline.
 2. Переконайтесь, що з'явився новий образ у `ECR` (`aws ecr list-images ...`).
 3. Перегляньте Argo CD UI чи `kubectl -n django-app get pods` — має відбутися автоматичне оновлення з новим тегом.
+
+## Моніторинг (Prometheus/Grafana)
+
+- Стек розгортається модулем `modules/monitoring` як Helm release `kube-prometheus-stack` у namespace `monitoring`.
+- Grafana:
+  ```bash
+  kubectl -n monitoring port-forward svc/<grafana-service> 3000:80
+  # де <grafana-service> = terraform output grafana_service_name
+  ```
+  Логін: `admin`, пароль — із змінної `grafana_admin_password` (див. `monitoring_variables.tf` або задайте через `-var`).
+- Prometheus/Alertmanager доступні через ті ж порт-форварди, якщо потрібно:
+  ```bash
+  kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-st-prometheus 9090:9090
+  kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-st-alertmanager 9093:9093
+  ```
+
+Дашборди Grafana (Kubernetes/Nodes/Pods) йдуть із kube-prometheus-stack за замовчуванням.
 
 Уся інфраструктура описана в гілці `lesson-8-9` цього репозиторію.

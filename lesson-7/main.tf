@@ -2,9 +2,9 @@ locals {
   region                      = "us-west-2"
   base_name                   = "lesson-7"
   vpc_cidr                    = "10.0.0.0/16"
+  availability_zones          = ["us-west-2a", "us-west-2b", "us-west-2c"]
   public_subnet_cidrs         = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
   private_subnet_cidrs        = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
-  availability_zones          = ["us-west-2a", "us-west-2b", "us-west-2c"]
   jenkins_namespace           = "jenkins"
   argocd_namespace            = "argocd"
   aws_credentials_secret_name = "jenkins-aws-creds"
@@ -48,14 +48,6 @@ locals {
   ]
 }
 
-# Підключаємо модуль для S3 та DynamoDB
-module "s3_backend" {
-  source      = "./modules/s3-backend"
-  bucket_name = "${local.base_name}-tf-state-431969328609"
-  table_name  = "${local.base_name}-terraform-locks"
-}
-
-# Підключаємо модуль для VPC (використовуємо таку ж мережу, як у попередньому ДЗ)
 module "vpc" {
   source             = "./modules/vpc"
   vpc_cidr_block     = local.vpc_cidr
@@ -63,6 +55,19 @@ module "vpc" {
   private_subnets    = local.private_subnet_cidrs
   availability_zones = local.availability_zones
   vpc_name           = "${local.base_name}-vpc"
+}
+
+locals {
+  vpc_id             = module.vpc.vpc_id
+  public_subnet_ids  = module.vpc.public_subnets
+  private_subnet_ids = module.vpc.private_subnets
+}
+
+# Підключаємо модуль для S3 та DynamoDB
+module "s3_backend" {
+  source      = "./modules/s3-backend"
+  bucket_name = "${local.base_name}-tf-state-431969328609"
+  table_name  = "${local.base_name}-terraform-locks"
 }
 
 # Підключаємо модуль для ECR
@@ -77,10 +82,10 @@ module "eks" {
   source             = "./modules/eks"
   cluster_name       = "${local.base_name}-eks"
   cluster_version    = "1.29"
-  vpc_id             = module.vpc.vpc_id
+  vpc_id             = local.vpc_id
   vpc_cidr_block     = local.vpc_cidr
-  public_subnet_ids  = module.vpc.public_subnets
-  private_subnet_ids = module.vpc.private_subnets
+  public_subnet_ids  = local.public_subnet_ids
+  private_subnet_ids = local.private_subnet_ids
   desired_size       = 3
   min_size           = 2
   max_size           = 5
@@ -128,18 +133,34 @@ module "argo_cd" {
   depends_on = [module.eks]
 }
 
+module "monitoring" {
+  source                 = "./modules/monitoring"
+  namespace              = "monitoring"
+  release_name           = "${local.base_name}-monitoring"
+  grafana_admin_password = var.grafana_admin_password
+  chart_version          = "65.5.1"
+
+  providers = {
+    helm       = helm.eks
+    kubernetes = kubernetes.eks
+  }
+
+  depends_on = [module.eks]
+}
+
 module "rds" {
   source = "./modules/rds"
 
   name_prefix           = "${local.base_name}-db"
-  use_aurora            = true
-  engine                = "aurora-postgresql"
-  engine_version        = "14.10"
-  aurora_instance_class = "db.r6g.medium"
+  use_aurora            = false
+  engine                = "postgres"
+  engine_version        = "15.15"
+  instance_class        = "db.t3.micro"
   master_username       = "dbadmin"
   master_password       = var.db_master_password
+  backup_retention      = 1
 
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
+  vpc_id             = local.vpc_id
+  private_subnet_ids = local.private_subnet_ids
   allowed_cidrs      = [local.vpc_cidr]
 }
